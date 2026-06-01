@@ -1,6 +1,6 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const pool = require('../config/db');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const pool = require("../config/db");
 
 /**
  * Register - Membuat akun pengguna baru
@@ -17,43 +17,54 @@ const register = async (req, res) => {
     if (!name || !email || !password || !role) {
       return res.status(400).json({
         success: false,
-        message: 'name, email, password, and role are required',
+        message: "name, email, password, and role are required",
       });
     }
 
     // Validasi role
-    if (!['roastery', 'coffee_shop', 'admin'].includes(role)) {
+    if (!["roastery", "coffee_shop"].includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'role must be one of: roastery, coffee_shop, admin',
+        message: "role must be one of: roastery, coffee_shop, admin",
       });
     }
 
     // Check if email already exists
     const [existingUser] = await connection.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
+      "SELECT id FROM users WHERE email = ?",
+      [email],
     );
 
     if (existingUser.length > 0) {
       return res.status(409).json({
         success: false,
-        message: 'Email already registered',
+        message: "Email already registered",
       });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Fallback nib_number: roastery wajib isi, coffee_shop pakai dummy jika kosong
+    const nibValue =
+      nib_number || (role === "coffee_shop" ? "0000000000000" : null);
+
+    if (role === "roastery" && !nibValue) {
+      return res.status(400).json({
+        success: false,
+        message: "nib_number is required for roastery",
+      });
+    }
+
     // Insert user ke database
     const [result] = await connection.query(
-      'INSERT INTO users (name, email, password, role, nib_number) VALUES (?, ?, ?, ?, ?)',
-      [name, email, hashedPassword, role, nib_number || null]
+      "INSERT INTO users (name, email, password, role, nib_number) VALUES (?, ?, ?, ?, ?)",
+      [name, email, hashedPassword, role, nibValue],
     );
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: "User registered successfully",
       data: {
         id: result.insertId,
         name,
@@ -62,10 +73,10 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error("Register error:", error);
     res.status(500).json({
       success: false,
-      message: 'Registration failed',
+      message: "Registration failed",
       error: error.message,
     });
   } finally {
@@ -88,20 +99,20 @@ const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'email and password are required',
+        message: "email and password are required",
       });
     }
 
     // Cari user by email
     const [users] = await connection.query(
-      'SELECT id, name, email, password, role FROM users WHERE email = ?',
-      [email]
+      "SELECT id, name, email, password, role FROM users WHERE email = ?",
+      [email],
     );
 
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: "Invalid email or password",
       });
     }
 
@@ -113,7 +124,7 @@ const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: "Invalid email or password",
       });
     }
 
@@ -125,13 +136,13 @@ const login = async (req, res) => {
         name: user.name,
         role: user.role,
       },
-      process.env.JWT_SECRET || 'your_jwt_secret',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET || "your_jwt_secret",
+      { expiresIn: "24h" },
     );
 
     res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: "Login successful",
       data: {
         id: user.id,
         name: user.name,
@@ -141,10 +152,10 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
-      message: 'Login failed',
+      message: "Login failed",
       error: error.message,
     });
   } finally {
